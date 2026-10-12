@@ -3,25 +3,31 @@ import { SidecarCredentials } from "../service/sidecar-credentials"
 import { addRendererHeaders, hasHeader, upsertHeader } from "./headers"
 import { isRendererUrl } from "./scheme"
 
-const rendererPermissions = new Set(["clipboard-sanitized-write", "notifications"])
+const rendererPermissions = new Set(["clipboard-sanitized-write", "fullscreen", "notifications"])
+
+const rendererContents = new Set<number>()
 
 export function allowRendererPermissions(win: BrowserWindow) {
   const webContentsId = win.webContents.id
+  rendererContents.add(webContentsId)
+  win.once("closed", () => rendererContents.delete(webContentsId))
   win.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
     callback(
-      rendererPermissions.has(permission) && isRendererUrl(details.requestingUrl) && webContents.id === webContentsId,
+      rendererPermissions.has(permission) &&
+        isRendererUrl(details.requestingUrl) &&
+        rendererContents.has(webContents.id),
     )
   })
   win.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
     if (!rendererPermissions.has(permission)) return false
 
-    if (webContents && webContents.id !== webContentsId) return false
+    if (webContents && !rendererContents.has(webContents.id)) return false
 
     return isRendererUrl(details.requestingUrl) || isRendererUrl(requestingOrigin)
   })
 }
 
-export function wireNavigationPolicy(win: BrowserWindow, openExternalURL: (url: string) => unknown) {
+export function wireNavigationPolicy(win: BrowserWindow, openExternalURL: (url: string) => void) {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!isRendererUrl(url)) openExternalURL(url)
 

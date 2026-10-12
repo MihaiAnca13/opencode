@@ -41,6 +41,11 @@
     0 12px 32px -12px color-mix(in oklch, var(--v2-text-text-base) 25%, transparent);
 }
 
+[data-slot="artifact-media"]:fullscreen {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 [data-slot="artifact-stage"][data-zoom="fit"] [data-slot="artifact-media"] {
   max-width: 100%;
   max-height: 100%;
